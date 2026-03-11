@@ -9,6 +9,9 @@ import base64
 from io import BytesIO
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import mysql.connector
+
 
 app = Flask(__name__)
 CORS(app)
@@ -19,20 +22,17 @@ app.secret_key = "brain_tumor_project_2026_secure_key"
 # Database Connection
 # =========================
 
-db = None
-cursor = None
+db = mysql.connector.connect(
+    host=os.environ.get("MYSQLHOST"),
+    user=os.environ.get("MYSQLUSER"),
+    password=os.environ.get("MYSQLPASSWORD"),
+    database=os.environ.get("MYSQLDATABASE"),
+    port=int(os.environ.get("MYSQLPORT"))
+)
 
-try:
-    db = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="brain_tumor"
-    )
-    cursor = db.cursor()
-    print("Database connected successfully")
-except Exception as e:
-    print("Database not available, running without DB:", e)
+cursor = db.cursor()
+
+print("Railway MySQL Connected Successfully")
 
 # =========================
 # Load Model
