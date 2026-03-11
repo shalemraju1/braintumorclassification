@@ -19,14 +19,22 @@ app.secret_key = "brain_tumor_project_2026_secure_key"
 # =========================
 # Database Connection
 # =========================
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Shalem@2005",
-    database="brain_tumor_db"
-)
+try:
+    db = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="brain_tumor"
+    )
+    cursor = db.cursor()
+    print("Database connected")
+except:
+    print("Database not available, running without DB")
+    db = None
+    cursor = None
 
-cursor = db.cursor()
+if cursor:
+    cursor.execute(...)
 print("Database Connected Successfully!")
 
 # =========================
