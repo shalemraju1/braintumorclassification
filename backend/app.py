@@ -9,9 +9,6 @@ import base64
 from io import BytesIO
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
-import mysql.connector
-
 
 app = Flask(__name__)
 CORS(app)
@@ -19,20 +16,29 @@ CORS(app)
 app.secret_key = "brain_tumor_project_2026_secure_key"
 
 # =========================
-# Database Connection
+# Database Connection (SAFE)
 # =========================
 
-db = mysql.connector.connect(
-    host=os.environ.get("MYSQLHOST"),
-    user=os.environ.get("MYSQLUSER"),
-    password=os.environ.get("MYSQLPASSWORD"),
-    database=os.environ.get("MYSQLDATABASE"),
-    port=int(os.environ.get("MYSQLPORT"))
-)
+db = None
+cursor = None
 
-cursor = db.cursor()
+try:
+    db = mysql.connector.connect(
+        host=os.environ.get("MYSQLHOST"),
+        user=os.environ.get("MYSQLUSER"),
+        password=os.environ.get("MYSQLPASSWORD"),
+        database=os.environ.get("MYSQLDATABASE"),
+        port=int(os.environ.get("MYSQLPORT"))
+    )
 
-print("Railway MySQL Connected Successfully")
+    cursor = db.cursor()
+    print("Railway MySQL Connected Successfully")
+
+except Exception as e:
+    print("Database connection failed:", e)
+    db = None
+    cursor = None
+
 
 # =========================
 # Load Model
@@ -60,50 +66,6 @@ def preprocess_image(image):
     image = np.expand_dims(image, axis=0)
     return image
 
-# =========================
-# Grad-CAM
-# =========================
-
-def generate_gradcam(model, image_array):
-
-    last_conv_layer = None
-    for layer in reversed(model.layers):
-        if isinstance(layer, tf.keras.layers.Conv2D):
-            last_conv_layer = layer
-            break
-
-    if last_conv_layer is None:
-        return None
-
-    conv_model = tf.keras.models.Model(
-        inputs=model.inputs,
-        outputs=last_conv_layer.output
-    )
-
-    conv_output = conv_model(image_array)
-
-    final_dense = model.layers[-1]
-    weights = final_dense.get_weights()[0]
-
-    prediction = model.predict(image_array)
-    class_index = np.argmax(prediction)
-    class_weights = weights[:,class_index]
-
-    conv_output = conv_output[0].numpy()
-
-    heatmap = np.zeros(shape=conv_output.shape[:2],dtype=np.float32)
-
-    for i in range(conv_output.shape[-1]):
-        heatmap += conv_output[:,:,i] * class_weights[i]
-
-    heatmap = np.maximum(heatmap,0)
-
-    if np.max(heatmap) == 0:
-        return None
-
-    heatmap /= np.max(heatmap)
-
-    return heatmap
 
 # =========================
 # Routes
@@ -117,6 +79,7 @@ def home():
 
     return render_template("index.html")
 
+
 # =========================
 # Register
 # =========================
@@ -125,8 +88,7 @@ def home():
 def register():
 
     if cursor is None:
-        flash("Registration disabled: database not available.", "danger")
-        return redirect(url_for("login"))
+        return "Database not connected"
 
     if request.method == "POST":
 
@@ -155,6 +117,7 @@ def register():
         return redirect(url_for("login"))
 
     return render_template("register.html")
+
 
 # =========================
 # Login
@@ -191,6 +154,7 @@ def login():
 
     return render_template("login.html")
 
+
 # =========================
 # Logout
 # =========================
@@ -204,58 +168,6 @@ def logout():
 
     return redirect(url_for("login"))
 
-# =========================
-# Web Prediction
-# =========================
-
-@app.route("/predict_web", methods=["POST"])
-def predict_web():
-
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    file = request.files["file"]
-
-    original_image = Image.open(file).convert("RGB")
-
-    image_array = preprocess_image(original_image)
-
-    prediction = model.predict(image_array)
-
-    predicted_class = classes[np.argmax(prediction)]
-
-    confidence = float(np.max(prediction))
-
-    heatmap = generate_gradcam(model,image_array)
-
-    heatmap_image_base64 = None
-
-    if heatmap is not None:
-
-        heatmap = cv2.resize(heatmap,original_image.size)
-
-        heatmap = np.uint8(255 * heatmap)
-
-        heatmap = cv2.applyColorMap(heatmap,cv2.COLORMAP_JET)
-
-        original_array = np.array(original_image)
-
-        superimposed_img = cv2.addWeighted(original_array,0.6,heatmap,0.4,0)
-
-        result_image = Image.fromarray(superimposed_img)
-
-        buffered = BytesIO()
-
-        result_image.save(buffered,format="PNG")
-
-        heatmap_image_base64 = base64.b64encode(buffered.getvalue()).decode()
-
-    return render_template(
-        "index.html",
-        prediction=predicted_class,
-        confidence=round(confidence*100,2),
-        heatmap_image=heatmap_image_base64
-    )
 
 # =========================
 # API Prediction (Flutter)
@@ -293,6 +205,7 @@ def predict_api():
         "confidence": round(confidence,2),
         "all_probabilities": all_probs
     })
+
 
 # =========================
 # Run App
