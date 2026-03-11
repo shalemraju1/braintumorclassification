@@ -121,11 +121,12 @@ def home():
 # Register
 # =========================
 
-@app.route("/register", methods=["GET","POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
 
     if cursor is None:
-        return "Database not available"
+        flash("Registration disabled: database not available.", "danger")
+        return redirect(url_for("login"))
 
     if request.method == "POST":
 
@@ -163,7 +164,7 @@ def register():
 def login():
 
     if cursor is None:
-        return "Database not available"
+        return render_template("login.html")
 
     if request.method == "POST":
 
