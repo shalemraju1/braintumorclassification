@@ -1,14 +1,15 @@
-from flask_cors import CORS
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
+from flask_cors import CORS
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
-import cv2
-import base64
-from io import BytesIO
-import mysql.connector
+import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# =========================
+# Flask Setup
+# =========================
 
 app = Flask(__name__)
 CORS(app)
@@ -16,23 +17,30 @@ CORS(app)
 app.secret_key = "brain_tumor_project_2026_secure_key"
 
 # =========================
-# Database Connection (SAFE)
+# PostgreSQL Database
 # =========================
 
 db = None
 cursor = None
 
 try:
-    db = mysql.connector.connect(
-        host=os.environ.get("MYSQLHOST"),
-        user=os.environ.get("MYSQLUSER"),
-        password=os.environ.get("MYSQLPASSWORD"),
-        database=os.environ.get("MYSQLDATABASE"),
-        port=int(os.environ.get("MYSQLPORT"))
-    )
+    DATABASE_URL = os.environ.get("DATABASE_URL")
 
+    db = psycopg2.connect(DATABASE_URL, sslmode="require")
     cursor = db.cursor()
-    print("Railway MySQL Connected Successfully")
+
+    print("PostgreSQL Connected Successfully")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users(
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        email TEXT UNIQUE,
+        password TEXT
+    )
+    """)
+
+    db.commit()
 
 except Exception as e:
     print("Database connection failed:", e)
@@ -41,34 +49,40 @@ except Exception as e:
 
 
 # =========================
-# Load Model
+# Load ML Model
 # =========================
 
 model_path = os.path.join("model", "brain_tumor_cnn_final.h5")
+
 model = tf.keras.models.load_model(model_path)
 
 dummy_input = tf.zeros((1,150,150,3))
 model(dummy_input)
 
+print("Model Loaded Successfully")
+
 # =========================
 # Class Labels
 # =========================
 
-classes = ["Glioma", "Meningioma", "Pituitary", "No Tumor"]
+classes = ["Glioma","Meningioma","Pituitary","No Tumor"]
+
 
 # =========================
 # Image Preprocessing
 # =========================
 
 def preprocess_image(image):
+
     image = image.resize((150,150))
-    image = np.array(image) / 255.0
-    image = np.expand_dims(image, axis=0)
+    image = np.array(image)/255.0
+    image = np.expand_dims(image,axis=0)
+
     return image
 
 
 # =========================
-# Routes
+# Home Page
 # =========================
 
 @app.route("/")
@@ -84,7 +98,7 @@ def home():
 # Register
 # =========================
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route("/register", methods=["GET","POST"])
 def register():
 
     if cursor is None:
@@ -102,6 +116,7 @@ def register():
         existing_user = cursor.fetchone()
 
         if existing_user:
+
             flash("Email already registered","danger")
             return redirect(url_for("register"))
 
@@ -134,7 +149,11 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        cursor.execute("SELECT * FROM users WHERE email=%s",(email,))
+        cursor.execute(
+            "SELECT * FROM users WHERE email=%s",
+            (email,)
+        )
+
         user = cursor.fetchone()
 
         if user and check_password_hash(user[3],password):
@@ -142,14 +161,13 @@ def login():
             session["user_id"] = user[0]
             session["username"] = user[1]
 
-            flash("Login successful!","success")
+            flash("Login successful","success")
 
             return redirect(url_for("home"))
 
         else:
 
             flash("Invalid email or password","danger")
-
             return redirect(url_for("login"))
 
     return render_template("login.html")
@@ -170,6 +188,41 @@ def logout():
 
 
 # =========================
+# Web Prediction
+# =========================
+
+@app.route("/predict_web", methods=["POST"])
+def predict_web():
+
+    if "file" not in request.files:
+
+        flash("No file uploaded","danger")
+        return redirect(url_for("home"))
+
+    file = request.files["file"]
+
+    image = Image.open(file).convert("RGB")
+
+    processed_image = preprocess_image(image)
+
+    prediction = model.predict(processed_image)
+
+    probabilities = prediction[0] * 100
+
+    predicted_index = np.argmax(probabilities)
+
+    predicted_class = classes[predicted_index]
+
+    confidence = float(probabilities[predicted_index])
+
+    return render_template(
+        "index.html",
+        prediction=predicted_class,
+        confidence=round(confidence,2)
+    )
+
+
+# =========================
 # API Prediction (Flutter)
 # =========================
 
@@ -177,6 +230,7 @@ def logout():
 def predict_api():
 
     if "file" not in request.files:
+
         return jsonify({"error":"No file uploaded"}),400
 
     file = request.files["file"]
@@ -201,9 +255,11 @@ def predict_api():
     }
 
     return jsonify({
+
         "prediction": predicted_class,
         "confidence": round(confidence,2),
         "all_probabilities": all_probs
+
     })
 
 
