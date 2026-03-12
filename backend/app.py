@@ -1,5 +1,6 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from flask_cors import CORS
@@ -35,10 +36,14 @@ except Exception as e:
     db = None
     cursor = None
 
-model_path = os.path.join("model","brain_tumor_cnn_final.h5")
-model = tf.keras.models.load_model(model_path)
-dummy_input = tf.zeros((1,150,150,3))
-model(dummy_input)
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        model_path = os.path.join("model","brain_tumor_cnn_final.h5")
+        model = tf.keras.models.load_model(model_path)
+    return model
 
 classes = ["Glioma","Meningioma","Pituitary","No Tumor"]
 
@@ -107,6 +112,7 @@ def predict_web():
     file=request.files["file"]
     image=Image.open(file).convert("RGB")
     processed_image=preprocess_image(image)
+    model=get_model()
     prediction=model.predict(processed_image)
     probabilities=prediction[0]*100
     predicted_index=np.argmax(probabilities)
@@ -121,6 +127,7 @@ def predict_api():
     file=request.files["file"]
     original_image=Image.open(file).convert("RGB")
     image_array=preprocess_image(original_image)
+    model=get_model()
     prediction=model.predict(image_array)
     probabilities=prediction[0]*100
     predicted_index=np.argmax(probabilities)
