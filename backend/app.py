@@ -19,6 +19,7 @@ try:
     DATABASE_URL = os.environ.get("DATABASE_URL")
     db = psycopg.connect(DATABASE_URL)
     cursor = db.cursor()
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users(
         id SERIAL PRIMARY KEY,
@@ -27,33 +28,55 @@ try:
         password TEXT
     )
     """)
+
     db.commit()
+
 except Exception as e:
-    print(e)
+    print("Database connection failed:", e)
     db = None
     cursor = None
 
+
+interpreter = None
+input_details = None
+output_details = None
+
 model_path = os.path.join("model", "brain_tumor_model.tflite")
 
-interpreter = tflite.Interpreter(model_path=model_path)
-interpreter.allocate_tensors()
+def get_interpreter():
+    global interpreter, input_details, output_details
 
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+    if interpreter is None:
 
-classes = ["Glioma","Meningioma","Pituitary","No Tumor"]
+        interpreter = tflite.Interpreter(model_path=model_path)
+        interpreter.allocate_tensors()
+
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
+
+    return interpreter
+
+
+classes = ["Glioma", "Meningioma", "Pituitary", "No Tumor"]
+
 
 def preprocess_image(image):
+
     image = image.resize((150,150))
     image = np.array(image) / 255.0
     image = np.expand_dims(image, axis=0).astype(np.float32)
+
     return image
+
 
 @app.route("/")
 def home():
+
     if "user_id" not in session:
         return redirect(url_for("login"))
+
     return render_template("index.html")
+
 
 @app.route("/register", methods=["GET","POST"])
 def register():
@@ -73,12 +96,13 @@ def register():
         existing_user = cursor.fetchone()
 
         if existing_user:
+
             flash("Email already registered","danger")
             return redirect(url_for("register"))
 
         cursor.execute(
-        "INSERT INTO users (name,email,password) VALUES (%s,%s,%s)",
-        (name,email,hashed_password)
+            "INSERT INTO users (name,email,password) VALUES (%s,%s,%s)",
+            (name,email,hashed_password)
         )
 
         db.commit()
@@ -88,6 +112,7 @@ def register():
         return redirect(url_for("login"))
 
     return render_template("register.html")
+
 
 @app.route("/login", methods=["GET","POST"])
 def login():
@@ -120,6 +145,7 @@ def login():
 
     return render_template("login.html")
 
+
 @app.route("/logout")
 def logout():
 
@@ -129,10 +155,12 @@ def logout():
 
     return redirect(url_for("login"))
 
+
 @app.route("/predict_web", methods=["POST"])
 def predict_web():
 
     if "file" not in request.files:
+
         flash("No file uploaded","danger")
         return redirect(url_for("home"))
 
@@ -142,7 +170,10 @@ def predict_web():
 
     processed_image = preprocess_image(image)
 
+    interpreter = get_interpreter()
+
     interpreter.set_tensor(input_details[0]["index"], processed_image)
+
     interpreter.invoke()
 
     prediction = interpreter.get_tensor(output_details[0]["index"])[0]
@@ -156,15 +187,17 @@ def predict_web():
     confidence = float(probabilities[predicted_index])
 
     return render_template(
-    "index.html",
-    prediction = predicted_class,
-    confidence = round(confidence,2)
+        "index.html",
+        prediction = predicted_class,
+        confidence = round(confidence,2)
     )
+
 
 @app.route("/api/predict", methods=["POST"])
 def predict_api():
 
     if "file" not in request.files:
+
         return jsonify({"error":"No file uploaded"}),400
 
     file = request.files["file"]
@@ -173,7 +206,10 @@ def predict_api():
 
     image_array = preprocess_image(image)
 
+    interpreter = get_interpreter()
+
     interpreter.set_tensor(input_details[0]["index"], image_array)
+
     interpreter.invoke()
 
     prediction = interpreter.get_tensor(output_details[0]["index"])[0]
@@ -196,6 +232,7 @@ def predict_api():
         "confidence": round(confidence,2),
         "all_probabilities": all_probs
     })
+
 
 if __name__ == "__main__":
 
