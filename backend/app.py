@@ -6,6 +6,8 @@ from PIL import Image
 import os
 import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 # =========================
 # Flask Setup
