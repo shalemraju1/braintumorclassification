@@ -6,6 +6,8 @@ from PIL import Image
 import psycopg
 import tflite_runtime.interpreter as tflite
 from werkzeug.security import generate_password_hash, check_password_hash
+import cv2
+import base64
 
 app = Flask(__name__)
 CORS(app)
@@ -67,6 +69,23 @@ def preprocess_image(image):
     image = np.expand_dims(image, axis=0).astype(np.float32)
 
     return image
+
+
+def generate_heatmap(image):
+
+    img = np.array(image)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+    heatmap = cv2.applyColorMap(gray, cv2.COLORMAP_JET)
+
+    overlay = cv2.addWeighted(img, 0.6, heatmap, 0.4, 0)
+
+    _, buffer = cv2.imencode(".jpg", overlay)
+
+    heatmap_base64 = base64.b64encode(buffer).decode("utf-8")
+
+    return heatmap_base64
 
 
 @app.route("/")
@@ -227,10 +246,13 @@ def predict_api():
         for i in range(len(classes))
     }
 
+    heatmap = generate_heatmap(image)
+
     return jsonify({
         "prediction": predicted_class,
         "confidence": round(confidence,2),
-        "all_probabilities": all_probs
+        "all_probabilities": all_probs,
+        "heatmap": heatmap
     })
 
 
