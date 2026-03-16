@@ -212,6 +212,12 @@ def predict_web():
     predicted_class = classes[predicted_index]
 
     confidence = float(probabilities[predicted_index])
+    if cursor is not None:
+    cursor.execute(
+        "INSERT INTO predictions (result, confidence) VALUES (%s, %s)",
+        (predicted_class, confidence)
+    )
+    db.commit()
 
     return render_template(
         "index.html",
