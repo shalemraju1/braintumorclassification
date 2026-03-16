@@ -276,6 +276,35 @@ def predict_api():
         "heatmap": heatmap
     })
 
+@app.route("/api/history")
+def get_history():
+
+    if cursor is None:
+        return jsonify([])
+
+    cursor.execute(
+        """
+        SELECT result, confidence, created_at
+        FROM predictions
+        ORDER BY created_at DESC
+        LIMIT 20
+        """
+    )
+
+    rows = cursor.fetchall()
+
+    history = []
+
+    for r in rows:
+
+        history.append({
+            "result": r[0],
+            "confidence": r[1],
+            "date": str(r[2])
+        })
+
+    return jsonify(history)
+
 
 if __name__ == "__main__":
 
