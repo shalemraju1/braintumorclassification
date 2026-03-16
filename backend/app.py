@@ -18,8 +18,11 @@ db = None
 cursor = None
 
 try:
+
     DATABASE_URL = os.environ.get("DATABASE_URL")
+
     db = psycopg.connect(DATABASE_URL)
+
     cursor = db.cursor()
 
     cursor.execute("""
@@ -30,6 +33,7 @@ try:
         password TEXT
     )
     """)
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS predictions(
         id SERIAL PRIMARY KEY,
@@ -44,7 +48,9 @@ try:
     db.commit()
 
 except Exception as e:
+
     print("Database connection failed:", e)
+
     db = None
     cursor = None
 
@@ -55,15 +61,19 @@ output_details = None
 
 model_path = os.path.join("model", "brain_tumor_model.tflite")
 
+
 def get_interpreter():
+
     global interpreter, input_details, output_details
 
     if interpreter is None:
 
         interpreter = tflite.Interpreter(model_path=model_path)
+
         interpreter.allocate_tensors()
 
         input_details = interpreter.get_input_details()
+
         output_details = interpreter.get_output_details()
 
     return interpreter
@@ -75,7 +85,9 @@ classes = ["Glioma", "Meningioma", "Pituitary", "No Tumor"]
 def preprocess_image(image):
 
     image = image.resize((150,150))
+
     image = np.array(image) / 255.0
+
     image = np.expand_dims(image, axis=0).astype(np.float32)
 
     return image
@@ -102,6 +114,7 @@ def generate_heatmap(image):
 def home():
 
     if "user_id" not in session:
+
         return redirect(url_for("login"))
 
     return render_template("index.html")
@@ -111,22 +124,27 @@ def home():
 def register():
 
     if cursor is None:
+
         return "Database not connected"
 
     if request.method == "POST":
 
         name = request.form["username"]
+
         email = request.form["email"]
+
         password = request.form["password"]
 
         hashed_password = generate_password_hash(password)
 
         cursor.execute("SELECT * FROM users WHERE email=%s",(email,))
+
         existing_user = cursor.fetchone()
 
         if existing_user:
 
             flash("Email already registered","danger")
+
             return redirect(url_for("register"))
 
         cursor.execute(
@@ -147,19 +165,23 @@ def register():
 def login():
 
     if cursor is None:
+
         return render_template("login.html")
 
     if request.method == "POST":
 
         email = request.form["email"]
+
         password = request.form["password"]
 
         cursor.execute("SELECT * FROM users WHERE email=%s",(email,))
+
         user = cursor.fetchone()
 
         if user and check_password_hash(user[3],password):
 
             session["user_id"] = user[0]
+
             session["username"] = user[1]
 
             flash("Login successful","success")
@@ -173,6 +195,61 @@ def login():
             return redirect(url_for("login"))
 
     return render_template("login.html")
+
+
+@app.route("/api/register", methods=["POST"])
+def register_api():
+
+    data = request.get_json()
+
+    name = data["name"]
+
+    email = data["email"]
+
+    password = data["password"]
+
+    hashed_password = generate_password_hash(password)
+
+    cursor.execute("SELECT * FROM users WHERE email=%s",(email,))
+
+    user = cursor.fetchone()
+
+    if user:
+
+        return jsonify({"error":"Email already exists"}),400
+
+    cursor.execute(
+        "INSERT INTO users (name,email,password) VALUES (%s,%s,%s)",
+        (name,email,hashed_password)
+    )
+
+    db.commit()
+
+    return jsonify({"message":"Registration successful"})
+
+
+@app.route("/api/login", methods=["POST"])
+def login_api():
+
+    data = request.get_json()
+
+    email = data["email"]
+
+    password = data["password"]
+
+    cursor.execute("SELECT * FROM users WHERE email=%s",(email,))
+
+    user = cursor.fetchone()
+
+    if user and check_password_hash(user[3],password):
+
+        return jsonify({
+            "message":"Login successful",
+            "user_id":user[0],
+            "username":user[1]
+        })
+
+    return jsonify({"error":"Invalid email or password"}),401
 
 
 @app.route("/logout")
@@ -191,6 +268,7 @@ def predict_web():
     if "file" not in request.files:
 
         flash("No file uploaded","danger")
+
         return redirect(url_for("home"))
 
     file = request.files["file"]
@@ -214,17 +292,18 @@ def predict_web():
     predicted_class = classes[predicted_index]
 
     confidence = float(probabilities[predicted_index])
-    if cursor is not None:
 
-    cursor.execute(
-        """
-        INSERT INTO predictions (result, confidence)
-        VALUES (%s,%s)
-        """,
-        (predicted_class, confidence)
-    )
+    if cursor is not None and "user_id" in session:
 
-    db.commit()
+        cursor.execute(
+            """
+            INSERT INTO predictions (user_id, result, confidence)
+            VALUES (%s,%s,%s)
+            """,
+            (session["user_id"], predicted_class, confidence)
+        )
+
+        db.commit()
 
     return render_template(
         "index.html",
@@ -276,10 +355,12 @@ def predict_api():
         "heatmap": heatmap
     })
 
+
 @app.route("/api/history")
 def get_history():
 
     if cursor is None:
+
         return jsonify([])
 
     cursor.execute(
