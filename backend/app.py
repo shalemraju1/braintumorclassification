@@ -30,6 +30,14 @@ try:
         password TEXT
     )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS predictions(
+            id SERIAL PRIMARY KEY,
+            result TEXT,
+            confidence FLOAT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
 
     db.commit()
 
