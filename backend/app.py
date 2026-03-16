@@ -31,13 +31,15 @@ try:
     )
     """)
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS predictions(
-            id SERIAL PRIMARY KEY,
-            result TEXT,
-            confidence FLOAT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
+    CREATE TABLE IF NOT EXISTS predictions(
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        result TEXT,
+        confidence FLOAT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
 
     db.commit()
 
@@ -213,10 +215,15 @@ def predict_web():
 
     confidence = float(probabilities[predicted_index])
     if cursor is not None:
+
     cursor.execute(
-        "INSERT INTO predictions (result, confidence) VALUES (%s, %s)",
+        """
+        INSERT INTO predictions (result, confidence)
+        VALUES (%s,%s)
+        """,
         (predicted_class, confidence)
     )
+
     db.commit()
 
     return render_template(
