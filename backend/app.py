@@ -17,6 +17,52 @@ app.secret_key = "brain_tumor_project_2026_secure_key"
 db = None
 cursor = None
 
+
+def get_db_connection():
+
+    database_url = os.environ.get("DATABASE_URL")
+
+    if not database_url:
+
+        raise ValueError("DATABASE_URL is not configured")
+
+    return psycopg.connect(database_url)
+
+
+def ensure_reports_table(conn):
+
+    with conn.cursor() as cur:
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS reports(
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                prediction TEXT NOT NULL,
+                confidence FLOAT NOT NULL,
+                risk_level TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+
+def get_risk_level(predicted_class, confidence):
+
+    if predicted_class == "No Tumor":
+
+        return "Low"
+
+    if confidence >= 85:
+
+        return "High"
+
+    if confidence >= 60:
+
+        return "Medium"
+
+    return "Low"
+
 try:
 
     DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -44,6 +90,8 @@ try:
         FOREIGN KEY (user_id) REFERENCES users(id)
     )
     """)
+
+    ensure_reports_table(db)
 
     db.commit()
 
@@ -319,6 +367,12 @@ def predict_api():
 
         return jsonify({"error":"No file uploaded"}),400
 
+    user_id = request.form.get("user_id", type=int)
+
+    if user_id is None:
+
+        return jsonify({"error":"Missing required field: user_id"}),400
+
     file = request.files["file"]
 
     image = Image.open(file).convert("RGB")
@@ -346,11 +400,36 @@ def predict_api():
         for i in range(len(classes))
     }
 
+    risk_level = get_risk_level(predicted_class, confidence)
+
+    try:
+
+        with get_db_connection() as conn:
+
+            ensure_reports_table(conn)
+
+            with conn.cursor() as cur:
+
+                cur.execute(
+                    """
+                    INSERT INTO reports (user_id, prediction, confidence, risk_level)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (user_id, predicted_class, confidence, risk_level)
+                )
+
+            conn.commit()
+
+    except (ValueError, psycopg.Error):
+
+        return jsonify({"error":"Database error while saving report"}),500
+
     heatmap = generate_heatmap(image)
 
     return jsonify({
         "prediction": predicted_class,
         "confidence": round(confidence,2),
+        "risk_level": risk_level,
         "all_probabilities": all_probs,
         "heatmap": heatmap
     })
@@ -359,32 +438,67 @@ def predict_api():
 @app.route("/api/history")
 def get_history():
 
-    if cursor is None:
+    user_id = request.args.get("user_id", type=int)
 
-        return jsonify([])
+    if user_id is None:
 
-    cursor.execute(
-        """
-        SELECT result, confidence, created_at
-        FROM predictions
-        ORDER BY created_at DESC
-        LIMIT 20
-        """
-    )
+        return jsonify({"error":"Missing required query parameter: user_id"}),400
 
-    rows = cursor.fetchall()
+    try:
+
+        with get_db_connection() as conn:
+
+            ensure_reports_table(conn)
+
+            with conn.cursor() as cur:
+
+                cur.execute(
+                    """
+                    SELECT id, prediction, confidence, risk_level, created_at
+                    FROM reports
+                    WHERE user_id = %s
+                    ORDER BY created_at DESC
+                    """,
+                    (user_id,)
+                )
+
+                rows = cur.fetchall()
+
+    except (ValueError, psycopg.Error):
+
+        return jsonify({"error":"Database error while fetching history"}),500
 
     history = []
 
-    for r in rows:
+    for row in rows:
 
         history.append({
-            "result": r[0],
-            "confidence": r[1],
-            "date": str(r[2])
+            "id": row[0],
+            "prediction": row[1],
+            "confidence": float(row[2]),
+            "risk_level": row[3],
+            "created_at": row[4].isoformat() if row[4] is not None else None
         })
 
-    return jsonify(history)
+    return jsonify(history),200
+
+
+@app.route("/api/init-db", methods=["GET"])
+def init_db_api():
+
+    try:
+
+        with get_db_connection() as conn:
+
+            ensure_reports_table(conn)
+
+            conn.commit()
+
+    except (ValueError, psycopg.Error):
+
+        return jsonify({"error":"Database initialization failed"}),500
+
+    return jsonify({"message":"Reports table is ready"}),200
 
 
 if __name__ == "__main__":
