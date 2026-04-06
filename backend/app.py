@@ -247,33 +247,85 @@ def login():
 
 @app.route("/api/register", methods=["POST"])
 def register_api():
+    data = request.get_json(silent=True)
 
-    data = request.get_json()
+    if data is None:
 
-    name = data["name"]
+        return jsonify({"error": "Invalid or missing JSON body"}), 400
 
-    email = data["email"]
+    name = data.get("name")
 
-    password = data["password"]
+    email = data.get("email")
 
-    hashed_password = generate_password_hash(password)
+    password = data.get("password")
 
-    cursor.execute("SELECT * FROM users WHERE email=%s",(email,))
+    if not name or not email or not password:
 
-    user = cursor.fetchone()
+        return jsonify({"error": "Missing required fields: name, email, password"}), 400
 
-    if user:
+    try:
 
-        return jsonify({"error":"Email already exists"}),400
+        hashed_password = generate_password_hash(password)
 
-    cursor.execute(
-        "INSERT INTO users (name,email,password) VALUES (%s,%s,%s)",
-        (name,email,hashed_password)
-    )
+        with get_db_connection() as conn:
 
-    db.commit()
+            with conn.cursor() as cur:
 
-    return jsonify({"message":"Registration successful"})
+                cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+
+                user = cur.fetchone()
+
+                if user:
+
+                    return jsonify({"error": "Email already exists"}), 409
+
+                cur.execute(
+                    "INSERT INTO users (name,email,password) VALUES (%s,%s,%s)",
+                    (name, email, hashed_password)
+                )
+
+        return jsonify({"message": "Registration successful"})
+
+    except psycopg.errors.UniqueViolation as e:
+
+        print("Unique violation during /api/register:", e)
+
+        return jsonify({"error": "Email already exists"}), 409
+
+    except Exception as e:
+
+        print("Error in /api/register:", e)
+
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@app.route("/api/init-users", methods=["POST"])
+def init_users_table_api():
+
+    try:
+
+        with get_db_connection() as conn:
+
+            with conn.cursor() as cur:
+
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS users(
+                        id SERIAL PRIMARY KEY,
+                        name TEXT,
+                        email TEXT UNIQUE,
+                        password TEXT
+                    )
+                    """
+                )
+
+        return jsonify({"message": "Users table initialized"})
+
+    except Exception as e:
+
+        print("Error in /api/init-users:", e)
+
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @app.route("/api/login", methods=["POST"])
