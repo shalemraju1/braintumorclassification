@@ -1,151 +1,42 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Brain Tumor Detection System</title>
+{% extends "base.html" %}
+{% from "components.html" import risk_badge, stat_card, probability_bar %}
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block content %}
 
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            background-color: #f4f9fc;
-        }
+<section class="stats-grid">
+    {{ stat_card('Total Reports', stats.total_reports if stats else 0, 'All saved predictions') }}
+    {{ stat_card('High Risk', stats.high_risk if stats else 0, 'Needs urgent review') }}
+    {{ stat_card('Medium Risk', stats.medium_risk if stats else 0, 'Monitor closely') }}
+    {{ stat_card('Low Risk', stats.low_risk if stats else 0, 'Routine follow-up') }}
+    {{ stat_card('Recent Activity', stats.recent_activity if stats else 0, 'Last 7 days') }}
+</section>
 
-        /* Top Navbar */
-        .navbar {
-            background: #0B6E99;
-            padding: 15px 40px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .navbar h2 {
-            margin: 0;
-        }
-
-        .navbar span {
-            font-weight: 300;
-        }
-
-        /* Main Container */
-        .container {
-            padding: 40px;
-        }
-
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 600px;
-            margin: auto;
-            box-shadow: 0px 8px 25px rgba(0,0,0,0.08);
-        }
-
-        h2 {
-            margin-top: 0;
-        }
-
-        input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            margin: 20px 0;
-        }
-
-        button {
-            padding: 12px 25px;
-            background-color: #1CA7EC;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 500;
-        }
-
-        button:hover {
-            background-color: #0B6E99;
-        }
-
-        .result-box {
-            margin-top: 25px;
-            padding: 20px;
-            background: #E6F4F9;
-            border-radius: 10px;
-        }
-
-        .prediction {
-            font-size: 18px;
-            font-weight: 600;
-            color: #0B6E99;
-        }
-
-        .confidence {
-            font-size: 16px;
-        }
-
-        img {
-            width: 100%;
-            margin-top: 20px;
-            border-radius: 12px;
-            box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: gray;
-            font-size: 13px;
-        }
-
-    </style>
-</head>
-
-<body>
-
-<div class="navbar">
-    <h2>🧠 Brain Tumor Detection</h2>
-    <span>AI Medical Diagnostic System</span>
-</div>
-
-<div class="container">
-
-    <div class="card">
-        <h2>Upload MRI Scan</h2>
-
-        <form method="POST" enctype="multipart/form-data" action="/predict_web">
-            <input type="file" name="file" required>
-            <button type="submit">Analyze Scan</button>
-        </form>
-
-        {% if prediction %}
-        <div class="result-box">
-            <div class="prediction">
-                Diagnosis: {{ prediction }}
+<section class="dashboard-grid">
+    
+    <div class="glass-card">
+        <div class="section-heading">
+            <div>
+                <h2 class="card-title">Recent Reports</h2>
+                <p class="card-copy">Latest predictions from your workspace.</p>
             </div>
-
-            <div class="confidence">
-                Confidence Level: {{ confidence }}%
-            </div>
-
-            {% if heatmap_image %}
-                <img src="data:image/png;base64,{{ heatmap_image }}">
-            {% endif %}
         </div>
+        {% if recent_reports %}
+            <div class="recent-list">
+                {% for report in recent_reports[:6] %}
+                    <a class="recent-item" href="{{ report.report_url }}">
+                        <img class="recent-item__thumb" src="{{ report.image_url or url_for('static', filename='images/placeholder.svg') }}" alt="Recent MRI scan">
+                        <div class="recent-item__body">
+                            <strong>{{ report.prediction }}</strong>
+                            <span>{{ report.created_at.strftime('%d %b %Y, %H:%M') if report.created_at else 'Unknown date' }}</span>
+                            {{ risk_badge(report.risk_level) }}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">No scans have been analyzed yet.</div>
         {% endif %}
-
     </div>
-
-</div>
-
-<div class="footer">
-    © 2026 Brain Tumor Detection System | AI Assisted Diagnosis
-</div>
-
-</body>
-</html>
+</section>
+{% endblock %}

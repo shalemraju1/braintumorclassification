@@ -1,0 +1,25 @@
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Generated prediction files
+backend/static/uploads/*
+backend/static/heatmaps/*
+
+# Keep the folders themselves
+!backend/static/uploads/.gitkeep
+!backend/static/heatmaps/.gitkeep
+
+# Logs
+*.log

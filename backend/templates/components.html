@@ -1,0 +1,23 @@
+{% macro risk_badge(risk_level) -%}
+<span class="risk-badge risk-{{ risk_level|lower }}">{{ risk_level }}</span>
+{%- endmacro %}
+
+{% macro stat_card(label, value, sublabel='') -%}
+<div class="stat-card">
+    <div class="stat-label">{{ label }}</div>
+    <div class="stat-value">{{ value }}</div>
+    {% if sublabel %}<div class="stat-meta">{{ sublabel }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro probability_bar(label, value) -%}
+<div class="probability-row">
+    <div class="probability-row__head">
+        <span>{{ label }}</span>
+        <span>{{ '%.2f'|format(value) }}%</span>
+    </div>
+    <div class="progress-track">
+        <div class="progress-fill" data-progress="{{ value }}"></div>
+    </div>
+</div>
+{%- endmacro %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "components.html" import risk_badge %}
+
+{% block content %}
+<div class="hero-card" style="margin-bottom: 18px;">
+    <p class="eyebrow">Clinical report</p>
+    <div class="result-header">
+        <div class="result-title">
+            <h1 class="page-title">Report #{{ report.id }}</h1>
+            <p class="page-subtitle">Patient {{ report.patient_name or 'Unknown' }} • {{ report.created_at.strftime('%d %b %Y, %H:%M') if report.created_at else 'Unknown date' }}</p>
+        </div>
+        {{ risk_badge(report.risk_level) }}
+    </div>
+    <div class="button-row">
+        <a href="{{ report.pdf_url }}" target="_blank">Print</a>
+        <a class="btn btn-primary" href="{{ report.pdf_url }}">Download PDF</a>
+        <a class="btn btn-secondary" href="{{ url_for('web.history') }}">Back to History</a>
+    </div>
+</div>
+
+<section class="content-grid">
+    <div class="glass-card">
+        <div class="section-heading">
+            <h2>Report Summary</h2>
+        </div>
+        <div class="diagnosis-card">
+            <p class="diagnosis-label">Prediction</p>
+            <p class="diagnosis-value">{{ report.prediction }}</p>
+            <div class="result-meta-grid">
+                <div class="meta-pill">
+                    <div class="meta-pill__label">Confidence</div>
+                    <div class="meta-pill__value">{{ '%.2f'|format(report.confidence) }}%</div>
+                </div>
+                <div class="meta-pill">
+                    <div class="meta-pill__label">Risk Level</div>
+                    <div class="meta-pill__value">{{ report.risk_level }}</div>
+                </div>
+                <div class="meta-pill">
+                    <div class="meta-pill__label">Patient</div>
+                    <div class="meta-pill__value">{{ report.patient_name or 'Unknown' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <ul class="recommendation-list">
+            {% for item in recommendations %}
+                <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="glass-card">
+        <div class="section-heading">
+            <h2>Imaging</h2>
+        </div>
+        <div class="image-grid">
+            {% if report.image_url %}
+                <div class="image-card">
+                    <img src="{{ report.image_url }}" alt="MRI image" data-preview-trigger data-preview-src="{{ report.image_url }}" data-preview-title="MRI image #{{ report.id }}">
+                    <div class="image-card__label">MRI Image</div>
+                </div>
+            {% endif %}
+            {% if report.heatmap_url %}
+                <div class="image-card">
+                    <img src="{{ report.heatmap_url }}" alt="Heatmap" data-preview-trigger data-preview-src="{{ report.heatmap_url }}" data-preview-title="Heatmap #{{ report.id }}">
+                    <div class="image-card__label">AI Heatmap</div>
+                </div>
+            {% endif %}
+        </div>
+        <div class="helper-text" style="margin-top: 14px;">Click any image to open a larger preview.</div>
+    </div>
+</section>
+{% endblock %}

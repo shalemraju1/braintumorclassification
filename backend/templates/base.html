@@ -2,106 +2,105 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Brain Tumor Detection System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Poppins', sans-serif;
-            background-color: #f4f9fc;
-        }
-
-        .navbar {
-            background: #0B6E99;
-            padding: 15px 40px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .navbar h2 {
-            margin: 0;
-        }
-
-        .navbar a {
-            color: white;
-            text-decoration: none;
-            margin-left: 20px;
-            font-weight: 500;
-        }
-
-        .container {
-            padding: 40px;
-        }
-
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
-        }
-
-        .btn {
-            background: #1CA7EC;
-            border: none;
-            padding: 10px 20px;
-            color: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .btn:hover {
-            background: #0B6E99;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
-
-        .result-box {
-            margin-top: 20px;
-            padding: 15px;
-            background: #E6F4F9;
-            border-radius: 8px;
-        }
-
-        .heatmap {
-            max-width: 100%;
-            margin-top: 20px;
-            border-radius: 8px;
-        }
-    </style>
+    <title>{{ title or "Brain Tumor Detection" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
 </head>
 <body>
+    <div class="shell{% if session.get('user_id') %} shell--app{% else %} shell--auth{% endif %}">
+        {% if session.get('user_id') %}
+            <aside class="sidebar">
+                <div class="sidebar__brand">
+                    <div class="brand-mark">BT</div>
+                    <div class="brand-copy">
+                        <h1>Brain Tumor AI</h1>
+                        <p>Clinical dashboard</p>
+                    </div>
+                </div>
 
-<div class="navbar">
-    <h2>🧠 Brain Tumor Detection</h2>
-    <div>
-        {% if session.get("user_id") %}
-            <a href="/">Dashboard</a>
-            <a href="/logout">Logout</a>
-        {% else %}
-            <a href="/login">Login</a>
-            <a href="/register">Register</a>
+                <div class="sidebar__section">
+                    <div class="sidebar__label">Navigation</div>
+                    <a class="sidebar__link" href="{{ url_for('web.home') }}">Dashboard</a>
+                    <a class="sidebar__link" href="{{ url_for('web.predict') }}">Predict MRI</a>
+                    <a class="sidebar__link" href="{{ url_for('web.history') }}">History</a>
+                    <a class="sidebar__link" href="{{ url_for('web.logout') }}">Logout</a>
+                </div>
+
+                <div class="sidebar__section sidebar__panel">
+                    <div class="sidebar__label">Profile</div>
+                    <div class="sidebar-profile">
+                        <div class="sidebar-profile__avatar">{{ (session.get('username', 'U')[:1])|upper }}</div>
+                        <div>
+                            <strong>{{ session.get('username', 'User') }}</strong>
+                            <p>Authenticated clinician</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar__section sidebar__panel">
+                    <div class="sidebar__label">Quick Actions</div>
+                    <a class="btn btn-primary btn-block" href="{{ url_for('web.predict') }}">New Prediction</a>
+                    <a class="btn btn-secondary btn-block" href="{{ url_for('web.history') }}">View History</a>
+                </div>
+            </aside>
         {% endif %}
+
+        <div class="workspace">
+            <header class="workspace__topbar">
+                <div>
+                    <div class="eyebrow" style="margin-bottom: 8px;">AI SaaS Platform</div>
+                    <h2 class="workspace__title">{{ title or "Brain Tumor Detection" }}</h2>
+                </div>
+                {% if session.get('user_id') %}
+                    <div class="workspace__topbar-actions">
+                        <a class="nav-link nav-link--primary" href="{{ url_for('web.predict') }}">Predict</a>
+                        <a class="nav-link" href="{{ url_for('web.history') }}">History</a>
+                    </div>
+                {% endif %}
+            </header>
+
+            <main class="page-wrap page-wrap--workspace">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flash-stack">
+                            {% for category, message in messages %}
+                                <div class="flash" data-tone="{{ category }}">
+                                    <span>{{ message }}</span>
+                                    <button class="btn btn-secondary" type="button" data-flash-dismiss>Dismiss</button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+
+            <footer class="footer">
+                Built for clinical workflow support with Flask, PostgreSQL, and TensorFlow Lite.
+            </footer>
+        </div>
     </div>
-</div>
 
+    <div class="loading-overlay" data-loading-overlay>
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <p>Analyzing MRI scan...</p>
+        </div>
+    </div>
 
-<div class="container">
-    {% block content %}{% endblock %}
-</div>
-
+    <div class="modal-overlay" data-modal-overlay>
+        <div class="modal-card">
+            <button class="modal-close" type="button" data-modal-close>×</button>
+            <div class="section-heading" style="padding: 4px 4px 14px;">
+                <h2 data-modal-title>Preview</h2>
+            </div>
+            <img src="" alt="Preview" data-modal-image>
+        </div>
+    </div>
 </body>
 </html>

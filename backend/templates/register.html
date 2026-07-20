@@ -1,19 +1,29 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="auth-wrap">
+    <section class="auth-card">
+        <p class="eyebrow">Create account</p>
+        <h1>Medical Staff Registration</h1>
+        <p>Register a secure account to review MRI predictions, save reports, and keep your workflow organized.</p>
 
-<div class="card" style="max-width:500px; margin:auto;">
-    <h2>Medical Staff Registration</h2>
+        <form class="form-grid" method="POST">
+            <div class="form-field">
+                <label for="username">Full Name</label>
+                <input id="username" type="text" name="username" placeholder="Dr. Alex Morgan" required>
+            </div>
+            <div class="form-field">
+                <label for="email">Email Address</label>
+                <input id="email" type="email" name="email" placeholder="doctor@hospital.com" required>
+            </div>
+            <div class="form-field">
+                <label for="password">Password</label>
+                <input id="password" type="password" name="password" placeholder="Create a secure password" required>
+            </div>
+            <button class="btn btn-primary" type="submit">Register</button>
+        </form>
 
-    <form method="POST">
-        <input type="text" name="username" placeholder="Full Name" required>
-        <input type="email" name="email" placeholder="Email Address" required>
-        <input type="password" name="password" placeholder="Password" required>
-
-        <button class="btn" type="submit">Register</button>
-    </form>
-
-    <p>Already have account? <a href="/login">Login</a></p>
+        <p style="margin-top: 18px;">Already have an account? <a href="{{ url_for('web.login') }}">Login</a></p>
+    </section>
 </div>
-
 {% endblock %}
