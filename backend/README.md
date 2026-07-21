@@ -1,97 +1,242 @@
-# Brain Tumor Detection API
+# 🧠 Brain Tumor Detection API
 
-## Overview
+A Flask-based REST API that powers the Brain Tumor Detection platform by providing secure user authentication, MRI image analysis, prediction history management, and PostgreSQL database integration. The API uses a TensorFlow Lite deep learning model to classify brain tumors from MRI scans and generate explainable prediction results.
 
-This project provides a Flask-based REST API for detecting brain tumors from MRI images using a trained deep learning model (TensorFlow Lite). The API supports user authentication, image prediction, and history tracking.
+---
 
-## Features
+## 🔗 Project Ecosystem
 
-* User registration and login
-* MRI image upload and tumor prediction
-* Tumor classification (Glioma, Meningioma, Pituitary, No Tumor)
-* Confidence score and risk level
-* Heatmap generation for explainability
-* Prediction history storage using PostgreSQL
+🌐 **Live Backend API**  
+https://brain-tumor-api-zg3b.onrender.com
 
-## Technology Stack
+📱 **Flutter Application Repository**  
+https://github.com/shalemraju1/brain-tumor-flutter-app
 
-* Python (Flask)
-* PostgreSQL (Render)
-* TensorFlow Lite
-* OpenCV
+---
 
-## API Endpoints
+## ✨ Features
+
+- 🔐 Secure user registration and login
+- 🧠 Brain tumor classification using TensorFlow Lite
+- 📤 MRI image upload and preprocessing
+- 📊 Confidence score with risk level prediction
+- 🔥 Heatmap generation for model explainability
+- 📁 Prediction history for authenticated users
+- 🗄️ PostgreSQL database integration
+- 🌐 RESTful JSON API
+- ☁️ Cloud deployment on Render
+
+---
+
+## 🩺 Tumor Classes
+
+The model classifies MRI scans into one of the following categories:
+
+- Glioma
+- Meningioma
+- Pituitary Tumor
+- No Tumor
+
+---
+
+## 🛠️ Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| Backend | Flask |
+| Language | Python |
+| AI Model | TensorFlow Lite |
+| Image Processing | OpenCV |
+| Database | PostgreSQL (Render) |
+| Authentication | Session-Based Authentication |
+| Deployment | Render |
+
+---
+
+# 📡 API Endpoints
+
+## Authentication
 
 ### Register
 
+```http
 POST /api/register
-Request Body:
+```
+
+```json
 {
-"name": "string",
-"email": "string",
-"password": "string"
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123"
 }
+```
+
+---
 
 ### Login
 
+```http
 POST /api/login
-Request Body:
+```
+
+```json
 {
-"email": "string",
-"password": "string"
+  "email": "john@example.com",
+  "password": "password123"
 }
+```
 
-### Predict
+---
 
+## Prediction
+
+```http
 POST /api/predict
-Form Data:
+```
 
-* image (file)
-* user_id (integer)
+### Form Data
 
-### History
+- image
+- user_id
 
-GET /api/history?user_id=<id>
+### Response
 
-## Database Schema
+- Predicted Tumor Type
+- Confidence Score
+- Risk Level
+- Heatmap Image
 
-### Users Table
+---
 
-* id (Primary Key)
-* name (Text)
-* email (Unique)
-* password (Text)
+## Prediction History
 
-### Reports Table
+```http
+GET /api/history?user_id={id}
+```
 
-* id (Primary Key)
-* user_id (Integer)
-* prediction (Text)
-* confidence (Float)
-* risk_level (Text)
-* created_at (Timestamp)
+Returns all previous prediction reports for the authenticated user.
 
-## Setup Instructions
+---
 
-1. Install dependencies:
-   pip install -r requirements.txt
+# 🗄️ Database Schema
 
-2. Run the application:
-   python app.py
+## Users
 
-3. Initialize database:
-   Visit /api/init-users and /api/init-db
+| Field | Type |
+|--------|------|
+| id | Integer |
+| name | Text |
+| email | Unique Text |
+| password | Text |
 
-## Deployment
+### Reports
 
-The backend is deployed on Render.
+| Field | Type |
+|--------|------|
+| id | Integer |
+| user_id | Integer |
+| prediction | Text |
+| confidence | Float |
+| risk_level | Text |
+| created_at | Timestamp |
 
-## Notes
+---
 
-* Ensure PostgreSQL connection string is correctly configured.
-* All endpoints return JSON responses.
-* Proper error handling is implemented for production stability.
+# 🚀 Getting Started
 
-## Author
+## Clone Repository
 
-C5 Team
+```bash
+git clone https://github.com/shalemraju1/braintumorclassification.git
+cd backend
+```
+
+## Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+## Configure Environment Variables
+
+Create a `.env` file inside the backend directory.
+
+```env
+DATABASE_URL=your_postgresql_connection_url
+SECRET_KEY=your_secret_key
+PORT=10000
+```
+
+## Run the Server
+
+```bash
+python app.py
+```
+
+Server runs on:
+
+```
+http://127.0.0.1:10000
+```
+
+## Initialize Database
+
+Open the following endpoints once:
+
+```
+/api/init-users
+```
+
+```
+/api/init-db
+```
+
+---
+
+# 📂 Project Structure
+
+```
+backend/
+│
+├── helpers/
+├── routes/
+├── model/
+├── static/
+├── templates/
+├── app.py
+├── requirements.txt
+└── README.md
+```
+
+---
+
+# ☁️ Deployment
+
+**Live Backend API**
+
+https://brain-tumor-api-zg3b.onrender.com
+
+Hosted on **Render** with **PostgreSQL** for secure cloud-based data storage.
+
+---
+
+# 🔮 Future Enhancements
+
+- JWT Authentication
+- Role-Based Access Control
+- Docker Support
+- Batch MRI Prediction
+- Swagger / OpenAPI Documentation
+- Model Versioning
+- Performance Monitoring & Logging
+
+---
+
+# 👨‍💻 Author
+
+**Shalem Raju Bejawada**
+
+- GitHub: https://github.com/shalemraju1
+- LinkedIn: https://www.linkedin.com/in/shalem-raju-bejawada-170b40290/
+
+Developed as part of a final-year AI/ML project focused on real-time brain tumor detection using Deep Learning, Flask, and TensorFlow Lite.
