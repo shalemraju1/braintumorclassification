@@ -27,6 +27,39 @@ https://github.com/shalemraju1/brain-tumor-flutter-app
 - ☁️ Cloud deployment on Render
 
 ---
+---
+
+# 📸 API Dashboard Screenshots
+
+## 🏠 Dashboard
+
+![Dashboard](assets/dashboard.png)
+
+---
+
+## 🧠 Prediction Page
+
+![Prediction Page](assets/prediction_page.png)
+
+---
+
+## 📊 Prediction Result
+
+![Prediction Result](assets/result.png)
+
+---
+
+## 📄 Report Summary
+
+![Report Summary](assets/report_summary.png)
+
+---
+
+## 📜 Prediction History
+
+![Prediction History](assets/history.png)
+
+---
 
 ## 🩺 Tumor Classes
 
